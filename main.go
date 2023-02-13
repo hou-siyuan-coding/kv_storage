@@ -3,15 +3,31 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"kv_storage/cli"
+	"net"
 	"os"
 )
 
 func main() {
-	client := cli.Client{}
+	conn, _ := net.Dial("tcp", "localhost:8001")
+	defer conn.Close()
+
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
-		respStr := client.Post("http://localhost:8001", sc.Text())
-		fmt.Println("响应体：", respStr)
+		input := sc.Text() + "\n"
+		if input == "quit\n" {
+			break
+		}
+		writeCount, err := conn.Write([]byte(input))
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println("client write successful", writeCount, "bytes")
+
+		reader := bufio.NewReader(conn)
+		resp, err := reader.ReadBytes('\n')
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println("resp body:", string(resp))
 	}
 }

@@ -1,0 +1,16 @@
+1、已实现的命令
+    string:
+        "set":
+	    "get"
+	    "mset":
+	    "mget":
+	    "msetnx"
+	    "del"
+    key的通用命令:
+	    "keys"
+	    "exists":
+	    "expire":
+	    "ttl":
+	    "persist":
+2、支持更多数据结构
+3、实现分布式集群
