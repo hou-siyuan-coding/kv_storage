@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"errors"
+	"kv_storage/datastruct"
 	"kv_storage/entity"
 	"sync"
 	"time"
@@ -101,4 +102,64 @@ func (m *Map) Persist(key []byte) int64 {
 	}
 	v.Persist()
 	return 1
+}
+
+func (m *Map) Lpush(key []byte, values [][]byte) int64 {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	v, exist := m.store[string(key)]
+	if !exist {
+		v = &entity.Value{V: datastruct.NewList()}
+		m.store[string(key)] = v
+	}
+	list, ok := v.V.(*datastruct.List)
+	if !ok {
+		return -1
+	}
+	list.Lpush(values)
+	return int64(len(values))
+}
+
+func (m *Map) Rpush(key []byte, values [][]byte) int64 {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	v, exist := m.store[string(key)]
+	if !exist {
+		v = &entity.Value{V: datastruct.NewList()}
+		m.store[string(key)] = v
+	}
+	list, ok := v.V.(*datastruct.List)
+	if !ok {
+		return -1
+	}
+	list.Rpush(values)
+	return int64(len(values))
+}
+
+func (m *Map) Lrange(key []byte, start, stop int) ([][]byte, error) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	v, exist := m.store[string(key)]
+	if !exist {
+		return [][]byte{}, nil
+	}
+	list, ok := v.V.(*datastruct.List)
+	if !ok {
+		return [][]byte{}, ErrTypeNotMatched
+	}
+	return list.Lrange(start, stop), nil
+}
+
+func (m *Map) Llen(key []byte) int {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	v, exist := m.store[string(key)]
+	if !exist {
+		return 0
+	}
+	list, ok := v.V.(*datastruct.List)
+	if !ok {
+		return 0
+	}
+	return list.GetLength()
 }

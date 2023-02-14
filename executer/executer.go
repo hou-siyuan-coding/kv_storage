@@ -146,6 +146,51 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 		}
 		e.db.SetDeadLine(args[1], time.Unix(int64(sec), 0))
 		return entity.MakeIntReply(1)
+	case "lpush": // List
+		if len(args) < 3 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		values := make([][]byte, len(args)-2)
+		for i := 2; i < len(args); i++ {
+			values[i-2] = args[i]
+		}
+		if num := e.db.Lpush(args[1], values); num == -1 {
+			return entity.MakeErrReply(datastore.ErrTypeNotMatched.Error())
+		} else {
+			return entity.MakeIntReply(num)
+		}
+	case "rpush":
+		if len(args) < 3 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		values := make([][]byte, len(args)-2)
+		for i := 2; i < len(args); i++ {
+			values[i-2] = args[i]
+		}
+		if num := e.db.Rpush(args[1], values); num == -1 {
+			return entity.MakeErrReply(datastore.ErrTypeNotMatched.Error())
+		} else {
+			return entity.MakeIntReply(num)
+		}
+	case "lrange":
+		if len(args) < 4 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		start, startErr := strconv.Atoi(string(args[2]))
+		stop, stopErr := strconv.Atoi(string(args[3]))
+		if startErr != nil || stopErr != nil {
+			return entity.MakeErrReply(datastore.ErrTypeNotMatched.Error())
+		}
+		values, err := e.db.Lrange(args[1], start, stop)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		return entity.MakeMultiBulkReply(values)
+	case "llen":
+		if len(args) < 2 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		return entity.MakeIntReply(int64(e.db.Llen(args[1])))
 	default:
 		return entity.MakeErrReply(ParamNotImplementedErr)
 	}
