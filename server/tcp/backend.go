@@ -5,6 +5,7 @@ import (
 	"io"
 	"kv_storage/aof"
 	"kv_storage/datastore"
+	"kv_storage/entity"
 	"kv_storage/executer"
 	"kv_storage/parser"
 	"net"
@@ -15,7 +16,6 @@ import (
 	"syscall"
 
 	"github.com/hdt3213/godis/lib/logger"
-	"github.com/hdt3213/godis/redis/protocol"
 )
 
 type Backend struct {
@@ -55,7 +55,7 @@ func (backend *Backend) Handle(conn net.Conn) {
 				return
 			}
 			// protocol err
-			errReply := protocol.MakeErrReply(payload.Err.Error())
+			errReply := entity.MakeErrReply(payload.Err.Error())
 			_, err := conn.Write(errReply.ToBytes())
 			if err != nil {
 				// h.closeClient(client)
@@ -68,14 +68,16 @@ func (backend *Backend) Handle(conn net.Conn) {
 			logger.Error("empty payload")
 			continue
 		}
-		r, ok := payload.Data.(*protocol.MultiBulkReply)
+		r, ok := payload.Data.(*entity.MultiBulkReply)
 		if !ok {
 			logger.Error("require multi bulk protocol")
 			continue
 		}
+		if len(r.Args) > 1 && string(r.Args[0]) == "expire" {
+			r.Args = aof.ExpireToExpireAt(r.Args)
+		}
 		reply := backend.executer.Execute(r.Args)
 		go backend.aof.ToCmdCh(payload)
-		fmt.Println("server response:", string(reply.ToBytes()))
 		conn.Write(reply.ToBytes())
 
 	}

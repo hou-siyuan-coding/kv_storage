@@ -3,13 +3,14 @@ package aof
 import (
 	"fmt"
 	"kv_storage/datastore"
+	"kv_storage/entity"
 	"kv_storage/executer"
 	"kv_storage/parser"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/hdt3213/godis/lib/logger"
-	"github.com/hdt3213/godis/redis/protocol"
 )
 
 type AofInstance struct {
@@ -26,7 +27,7 @@ func NewAofInstance(fileName string) *AofInstance {
 }
 
 func (a *AofInstance) ToCmdCh(payload *parser.Payload) {
-	fmt.Println("cmd to buffer")
+	// fmt.Println("cmd to buffer")
 	a.cmdCh <- *payload
 }
 
@@ -58,7 +59,7 @@ func (a *AofInstance) Init(db *datastore.Map, execInstance *executer.Executer) e
 				logger.Error("empty payload")
 				continue
 			}
-			r, ok := payload.Data.(*protocol.MultiBulkReply)
+			r, ok := payload.Data.(*entity.MultiBulkReply)
 			if !ok {
 				logger.Error("require multi bulk protocol")
 				continue
@@ -70,4 +71,16 @@ func (a *AofInstance) Init(db *datastore.Map, execInstance *executer.Executer) e
 	}
 	fmt.Println("build completed")
 	return nil
+}
+
+func ExpireToExpireAt(args [][]byte) [][]byte {
+	var cmd [][]byte
+	if len(args) < 3 {
+		return args
+	}
+	sec, err := strconv.Atoi(string(args[2]))
+	if err != nil {
+		return args
+	}
+	return append(cmd, []byte("expireat"), args[1], []byte(fmt.Sprint(time.Now().Unix()+int64(sec))))
 }

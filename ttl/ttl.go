@@ -15,3 +15,6 @@ func NewTTL(lifeCycle time.Duration) *TTL {
 	return &TTL{startTime: now, lifeCycle: lifeCycle, DeadLine: now.Add(lifeCycle)}
 }
 
+func NewTTLWithDeadLine(deadLine time.Time) *TTL {
+	return &TTL{DeadLine: deadLine}
+}

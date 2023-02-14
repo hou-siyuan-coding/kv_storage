@@ -29,6 +29,10 @@ func (v *Value) SetTTL(lifeCycle time.Duration) {
 	v.ttl = ttl.NewTTL(lifeCycle)
 }
 
+func (v *Value) SetDeadLine(deadLine time.Time) {
+	v.ttl = ttl.NewTTLWithDeadLine(deadLine)
+}
+
 func (v *Value) HaveLife() bool {
 	return v.ttl != nil
 }

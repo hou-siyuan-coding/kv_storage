@@ -4,6 +4,7 @@ import (
 	"kv_storage/datastore"
 	"kv_storage/entity"
 	"strconv"
+	"time"
 )
 
 const (
@@ -131,6 +132,20 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 			return entity.MakeIntReply(0)
 		}
 		return entity.MakeIntReply(e.db.Persist(args[1]))
+	case "expireat":
+		if len(args) < 3 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		_, exist, _ := e.db.Get(args[1])
+		if !exist {
+			return entity.MakeIntReply(0)
+		}
+		sec, err := strconv.Atoi(string(args[2]))
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		e.db.SetDeadLine(args[1], time.Unix(int64(sec), 0))
+		return entity.MakeIntReply(1)
 	default:
 		return entity.MakeErrReply(ParamNotImplementedErr)
 	}

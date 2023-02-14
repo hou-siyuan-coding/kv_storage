@@ -72,6 +72,13 @@ func (m *Map) SetTTL(key []byte, second int) {
 	value.SetTTL(time.Second * time.Duration(second))
 }
 
+func (m *Map) SetDeadLine(key []byte, deadLine time.Time) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	value := m.store[string(key)]
+	value.SetDeadLine(deadLine)
+}
+
 func (m *Map) GetLeftLife(key []byte) int64 {
 	m.mx.Lock()
 	defer m.mx.Unlock()
