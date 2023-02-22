@@ -3,42 +3,29 @@ package main
 import (
 	"fmt"
 	"kv_storage/datastruct"
+	"math/rand"
 )
 
 func main() {
-	l := datastruct.NewList()
-	vs := l.Lrange(0, -2)
-	fmt.Println(vs)
-	fmt.Println(l.GetLength())
-	l.Rpush([]string{"a", "b", "c"})
-	vs = l.Lrange(0, -2)
-	fmt.Println(vs)
-	fmt.Println(l.GetLength())
-	l.Lpush([]string{"1", "2", "3"})
-	vs = l.Lrange(0, -2)
-	fmt.Println(vs)
-	fmt.Println(l.GetLength())
+	m := make(map[int]int)
+	for i := 0; i < 100; i++ {
+		n := datastruct.RandomLevel()
+		if v, ok := m[n]; ok {
+			m[n] = v + 1
+		} else {
+			m[n] = 1
+		}
+	}
+	fmt.Println(m)
+}
 
-	// conn, _ := net.Dial("tcp", "localhost:8001")
-	// defer conn.Close()
-
-	// sc := bufio.NewScanner(os.Stdin)
-	// for sc.Scan() {
-	// 	input := sc.Text() + "\n"
-	// 	if input == "quit\n" {
-	// 		break
-	// 	}
-	// 	writeCount, err := conn.Write([]byte(input))
-	// 	if err != nil {
-	// 		fmt.Println(err.Error())
-	// 	}
-	// 	fmt.Println("client write successful", writeCount, "bytes")
-
-	// 	reader := bufio.NewReader(conn)
-	// 	resp, err := reader.ReadBytes('\n')
-	// 	if err != nil {
-	// 		fmt.Println(err.Error())
-	// 	}
-	// 	fmt.Println("resp body:", string(resp))
-	// }
+func randomLevel() int16 {
+	level := int16(1)
+	for float32(rand.Int31()&0xFFFF) < (0.25 * 0xFFFF) {
+		level++
+	}
+	if level < 16 {
+		return level
+	}
+	return 16
 }

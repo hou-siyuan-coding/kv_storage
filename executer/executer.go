@@ -12,6 +12,7 @@ const (
 	MissParamErr           = "miss parameter"
 	ParamNotImplementedErr = "current commonds can not implemented"
 	NoErr                  = "+OK"
+	ParamUncorrect         = "args uncorrect"
 )
 
 type Executer struct {
@@ -27,7 +28,7 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 		return entity.MakeErrReply(ParamNotFoundErr)
 	}
 	switch string(args[0]) {
-	case "set":
+	case "set": // string
 		if len(args) < 3 {
 			return entity.MakeErrReply(MissParamErr)
 		}
@@ -71,7 +72,7 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 			i += 2
 		}
 		return entity.MakeStatusReply(NoErr)
-	case "del":
+	case "del": // key
 		if len(args) < 2 {
 			return entity.MakeErrReply(MissParamErr)
 		}
@@ -147,12 +148,9 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 		e.db.SetDeadLine(args[1], time.Unix(int64(sec), 0))
 		return entity.MakeIntReply(1)
 	case "lpush": // List
-		if len(args) < 3 {
-			return entity.MakeErrReply(MissParamErr)
-		}
-		values := make([][]byte, len(args)-2)
-		for i := 2; i < len(args); i++ {
-			values[i-2] = args[i]
+		values, err := prePush(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
 		}
 		if num := e.db.Lpush(args[1], values); num == -1 {
 			return entity.MakeErrReply(datastore.ErrTypeNotMatched.Error())
@@ -160,12 +158,9 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 			return entity.MakeIntReply(num)
 		}
 	case "rpush":
-		if len(args) < 3 {
-			return entity.MakeErrReply(MissParamErr)
-		}
-		values := make([][]byte, len(args)-2)
-		for i := 2; i < len(args); i++ {
-			values[i-2] = args[i]
+		values, err := prePush(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
 		}
 		if num := e.db.Rpush(args[1], values); num == -1 {
 			return entity.MakeErrReply(datastore.ErrTypeNotMatched.Error())
@@ -173,15 +168,11 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 			return entity.MakeIntReply(num)
 		}
 	case "lrange":
-		if len(args) < 4 {
-			return entity.MakeErrReply(MissParamErr)
+		key, start, stop, err := preLrange(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
 		}
-		start, startErr := strconv.Atoi(string(args[2]))
-		stop, stopErr := strconv.Atoi(string(args[3]))
-		if startErr != nil || stopErr != nil {
-			return entity.MakeErrReply(datastore.ErrTypeNotMatched.Error())
-		}
-		values, err := e.db.Lrange(args[1], start, stop)
+		values, err := e.db.Lrange(key, start, stop)
 		if err != nil {
 			return entity.MakeErrReply(err.Error())
 		}
@@ -191,6 +182,170 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 			return entity.MakeErrReply(MissParamErr)
 		}
 		return entity.MakeIntReply(int64(e.db.Llen(args[1])))
+	case "lindex":
+		key, index, err := preLindex(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if value, err := e.db.Lindex(key, index); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeBulkReply(value)
+		}
+	case "linsert":
+		key, before, pivot, value, err := preLinsert(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if length, err := e.db.Linsert(key, before, pivot, value); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(int64(length))
+		}
+	case "lrem":
+		key, count, value, err := preLrem(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if removedNum, err := e.db.Lrem(key, count, value); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(int64(removedNum))
+		}
+	case "ltrim":
+		key, start, stop, err := preLrange(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if err := e.db.Ltrim(key, start, stop); err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		return entity.MakeOkReply()
+	case "lset":
+		key, index, value, err := preLset(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if e.db.Lset(key, index, value); err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		return entity.MakeOkReply()
+	case "lpop":
+		key, count, err := prePop(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if poped, err := e.db.Lpop(key, count); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeMultiBulkReply(poped)
+		}
+	case "rpop":
+		key, count, err := prePop(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if poped, err := e.db.Rpop(key, count); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeMultiBulkReply(poped)
+		}
+	case "zadd": // zset
+		names, scores, err := preZadd(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if insertedNum, err := e.db.Zadd(scores, names, string(args[1])); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(int64(insertedNum))
+		}
+	case "zrange":
+		start, stop, withScore, err := preZrevrange(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if rs, err := e.db.Zrange(string(args[1]), start, stop, false, withScore); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeMultiBulkReply(rs)
+		}
+	case "zrevrange":
+		start, stop, withScore, err := preZrevrange(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if rs, err := e.db.Zrange(string(args[1]), start, stop, true, withScore); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeMultiBulkReply(rs)
+		}
+	case "zrem":
+		if len(args) < 3 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		if removedNum, err := e.db.Zrem(string(args[1]), args[2:]); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(removedNum)
+		}
+	case "zcard":
+		if len(args) < 2 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		if num, err := e.db.Zcard(string(args[1])); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(num)
+		}
+	case "zcount":
+		if len(args) < 4 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		if num, err := e.db.Zcount(string(args[1]), args[2], args[3]); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(num)
+		}
+	case "zrangebyscore":
+		key, min, max, withScore, offset, count, err := preZrankByScore(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if rs, err := e.db.ZrangeByScore(key, min, max, withScore, false, offset, count); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeMultiBulkReply(rs)
+		}
+	case "zrevrangebyscore":
+		key, min, max, withScore, offset, count, err := preZrankByScore(args)
+		if err != nil {
+			return entity.MakeErrReply(err.Error())
+		}
+		if rs, err := e.db.ZrangeByScore(key, min, max, withScore, true, offset, count); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeMultiBulkReply(rs)
+		}
+	case "zrank":
+		if len(args) < 3 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		if rank, err := e.db.Zrank(args[1], args[2], false); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(rank)
+		}
+	case "zrevrank":
+		if len(args) < 3 {
+			return entity.MakeErrReply(MissParamErr)
+		}
+		if rank, err := e.db.Zrank(args[1], args[2], true); err != nil {
+			return entity.MakeErrReply(err.Error())
+		} else {
+			return entity.MakeIntReply(rank)
+		}
+	// case "zincrby":
 	default:
 		return entity.MakeErrReply(ParamNotImplementedErr)
 	}

@@ -1,4 +1,4 @@
-package datastruct
+package main
 
 type List struct {
 	length     int
@@ -76,4 +76,15 @@ func (l *List) Lrange(start, stop int) [][]byte {
 type ListNode struct {
 	nodeValue  []byte
 	next, prev *ListNode
+}
+
+func main() {
+	// zset := sortedset.MakeSkiplist()
+	// ns := []float64{0, 2, 5, 1, 3, 0, 6, -1, 11, 7, 10, 8, 14, 9, 12, 13, 5}
+	// for i, v := range []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
+	// 	"o", "p", "q"} {
+	// 	zset.Insert(v, ns[i])
+	// }
+	l := NewList()
+	l.Rpush([][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e"), []byte("f")})
 }
