@@ -205,7 +205,11 @@ func (m *Map) Lrem(key string, count int, value string) (int, error) {
 	if !ok {
 		return 0, ErrTypeNotMatched
 	}
-	return list.Lrem(count, value), nil
+	removedNum := list.Lrem(count, value)
+	if list.GetLength() == 0 {
+		delete(m.store, key)
+	}
+	return removedNum, nil
 }
 
 func (m *Map) Ltrim(key string, start, stop int) error {
@@ -219,7 +223,11 @@ func (m *Map) Ltrim(key string, start, stop int) error {
 	if !ok {
 		return ErrTypeNotMatched
 	}
-	return list.Ltrim(start, stop)
+	list.Ltrim(start, stop)
+	if list.GetLength() == 0 {
+		delete(m.store, key)
+	}
+	return nil
 }
 
 func (m *Map) Lset(key string, index int, value string) error {
@@ -247,7 +255,11 @@ func (m *Map) Lpop(key string, count int) ([][]byte, error) {
 	if !ok {
 		return nil, ErrTypeNotMatched
 	}
-	return list.Lpop(count), nil
+	poped := list.Lpop(count)
+	if list.GetLength() == 0 {
+		delete(m.store, key)
+	}
+	return poped, nil
 }
 
 func (m *Map) Rpop(key string, count int) ([][]byte, error) {
@@ -261,7 +273,11 @@ func (m *Map) Rpop(key string, count int) ([][]byte, error) {
 	if !ok {
 		return nil, ErrTypeNotMatched
 	}
-	return list.Rpop(count), nil
+	poped := list.Rpop(count)
+	if list.GetLength() == 0 {
+		delete(m.store, key)
+	}
+	return poped, nil
 }
 
 // sortedset
@@ -382,6 +398,9 @@ func (m *Map) Zrem(key string, names [][]byte) (int64, error) {
 		if removed := sortedSet.Remove(string(v)); removed {
 			removedNum++
 		}
+	}
+	if sortedSet.Len() == 0 {
+		delete(m.store, key)
 	}
 	return removedNum, nil
 }

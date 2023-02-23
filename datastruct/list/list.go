@@ -253,10 +253,11 @@ func (l *List) getHead() []byte {
 		return nil
 	}
 	if l.head == l.tail {
+		value := l.head.nodeValue
 		l.head = nil
 		l.tail = nil
 		l.length = 0
-		return nil
+		return value
 	}
 	node := l.head
 	l.head = node.next
@@ -271,10 +272,11 @@ func (l *List) getTail() []byte {
 		return nil
 	}
 	if l.head == l.tail {
+		value := l.tail.nodeValue
 		l.head = nil
 		l.tail = nil
 		l.length = 0
-		return nil
+		return value
 	}
 	node := l.tail
 	l.tail = node.prev
@@ -312,13 +314,13 @@ func (l *List) Rpop(count int) [][]byte {
 	return poped
 }
 
-func (l *List) Ltrim(start, stop int) error {
+func (l *List) Ltrim(start, stop int) {
 	start, stop, err := l.checkborder(start, stop)
 	if err != nil {
 		l.head = nil
 		l.tail = nil
 		l.length = 0
-		return nil
+		return
 	}
 	var begin, end *ListNode
 	rank := 0
@@ -333,7 +335,6 @@ func (l *List) Ltrim(start, stop int) error {
 	}
 	newLength := stop - start + 1
 	l.trim(begin, end, newLength)
-	return nil
 }
 
 type ListNode struct {
