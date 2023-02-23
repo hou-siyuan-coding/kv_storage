@@ -1,22 +1,24 @@
 # kv_storage
 Distributed remote dictionary server in memory but data can be persistent in disk.
+
 1、已实现的命令
     string:
-      set
-	    get
-	    mset
-	    mget
-	    msetnx
-	    del
+      	set
+	get
+	mset
+	mget
+	msetnx
+	del
     key:
-	    keys
-	    exists
-	    expire
-	    ttlss
-	    persist:
-		  expireat
+    	keys
+	exists
+	expire
+	ttlss
+	persist:
+	expireat
     list:
       lpush
+      
       rpush
       llen
       lrange
