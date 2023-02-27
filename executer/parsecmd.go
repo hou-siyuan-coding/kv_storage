@@ -203,3 +203,10 @@ func preZrankByScore(args [][]byte) (key string, min, max *sortedset.ScoreBorder
 	}
 	return
 }
+
+func GetKey(args [][]byte) string {
+	if len(args) < 2 {
+		return ""
+	}
+	return string(args[1])
+}

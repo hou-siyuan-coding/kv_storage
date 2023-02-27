@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"time"
 	"bufio"
 	"bytes"
 	"errors"
@@ -168,6 +169,104 @@ func Parse0(reader io.Reader, ch chan<- *Payload) {
 					Err:  err,
 				}
 				state = readState{}
+			}
+		}
+	}
+}
+
+func WaitReplyWithTime(reader io.Reader) (entity.Reply, bool) {
+	select {
+	case payload := <-ParseSingleReply(reader):
+		return payload.Data, false
+	case <- time.After(time.Duration(3)*time.Second):
+		return nil, true
+	}
+}
+
+func ParseSingleReply(reader io.Reader) <-chan *Payload {
+	ch := make(chan *Payload, 1)
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err, string(debug.Stack()))
+		}
+	}()
+
+	bufReader := bufio.NewReader(reader)
+	var state readState
+	var err error
+	var msg []byte
+	for {
+		// read line
+		// var ioErr bool
+		msg, _, err = readLine(bufReader, &state)
+		if err != nil {
+			ch <- &Payload{Err: err}
+			return ch
+		}
+
+		// parse line
+		if !state.readingMultiLine {
+			// receive new response
+			if msg[0] == '*' {
+				// multi bulk protocol
+				err = parseMultiBulkHeader(msg, &state)
+				if err != nil {
+					ch <- &Payload{
+						Err: errors.New("protocol error: " + string(msg)),
+					}
+					return ch
+				}
+				if state.expectedArgsCount == 0 {
+					ch <- &Payload{
+						Data: &entity.EmptyMultiBulkReply{},
+					}
+					return ch
+				}
+			} else if msg[0] == '$' { // bulk protocol
+				err = parseBulkHeader(msg, &state)
+				if err != nil {
+					ch <- &Payload{
+						Err: errors.New("protocol error: " + string(msg)),
+					}
+					return ch
+				}
+				if state.bulkLen == -1 { // null bulk protocol
+					ch <- &Payload{
+						Data: &entity.NullBulkReply{},
+					}
+					return ch
+				}
+			} else {
+				// single line protocol
+				result, err := parseSingleLineReply(msg)
+				ch <- &Payload{
+					Data: result,
+					Err:  err,
+				}
+				return ch
+			}
+		} else {
+			// receive following bulk protocol
+			err = readBody(msg, &state)
+			if err != nil {
+				ch <- &Payload{
+					Err: errors.New("protocol error: " + string(msg)),
+				}
+				return ch
+			}
+			// if sending finished
+			if state.finished() {
+				var result entity.Reply
+				if state.msgType == '*' {
+					result = entity.MakeMultiBulkReply(state.args)
+				} else if state.msgType == '$' {
+					result = entity.MakeBulkReply(state.args[0])
+				}
+				ch <- &Payload{
+					Data: result,
+					Err:  err,
+				}
+				return ch
 			}
 		}
 	}

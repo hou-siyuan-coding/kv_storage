@@ -28,6 +28,8 @@ func (e *Executer) Execute(args [][]byte) entity.Reply {
 		return entity.MakeErrReply(ParamNotFoundErr)
 	}
 	switch string(args[0]) {
+	case "ping":
+		return entity.MakeBulkReply([]byte("pong"))
 	case "set": // string
 		if len(args) < 3 {
 			return entity.MakeErrReply(MissParamErr)
