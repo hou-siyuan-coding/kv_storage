@@ -204,9 +204,11 @@ func preZrankByScore(args [][]byte) (key string, min, max *sortedset.ScoreBorder
 	return
 }
 
-func GetKey(args [][]byte) string {
-	if len(args) < 2 {
-		return ""
+func GetKey(args [][]byte) (key string, isHeartbeat bool) {
+	if len(args) == 1 && string(args[0]) == "ping" {
+		isHeartbeat = true
+	} else if len(args) >= 2 {
+		key = string(args[1])
 	}
-	return string(args[1])
+	return
 }

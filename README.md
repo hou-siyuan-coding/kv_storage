@@ -1,7 +1,13 @@
 # kv_storage
 Distributed remote dictionary server in memory but data can be persistent in disk.
 
-1、已实现的命令  
+1、支持的数据结构
+
+	string
+	list 
+	sortedSet
+
+2、已实现的命令  
 
 	string:  
 		set  
@@ -9,13 +15,13 @@ Distributed remote dictionary server in memory but data can be persistent in dis
 		mset
 		mget
 		msetnx
-		del
 	key:
 		keys
+		del
 		exists
 		expire
-		ttlss
-		persist:
+		ttl
+		persist
 		expireat
 	list:
 		lpush
@@ -39,11 +45,7 @@ Distributed remote dictionary server in memory but data can be persistent in dis
 		zrangebyscore
 		zrevrangebyscore
 		zrevrank
-      
-2、支持的数据结构
-
-	string
-	list 
-	sortedSet
 	
-3、实现分布式集群
+3、集群模式  
+
+	集群是去中心化模式，没有主从节点，所有节点的职责是相同的。而且对客户端是透明的，只要连接上集群中任意一个节点就可以访问集群中所有数据。

@@ -162,11 +162,11 @@ func (backend *Backend) resend(args [][]byte) (bool, entity.Reply) {
 	if !backend.isCluster {
 		return false, nil
 	}
-	key := executer.GetKey(args)
-	fmt.Println("key:", key)
-	if key == "" {
+	key, isHeartbeat := executer.GetKey(args)
+	if isHeartbeat || key == "" {
 		return false, nil
 	}
+	fmt.Println("key:", key)
 	nodeId := algorithm.Consistenthash.PickNode(key)
 	fmt.Println("need node id:", nodeId, "current node id:", backend.address)
 	if backend.address == nodeId {
